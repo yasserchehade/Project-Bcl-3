@@ -5,12 +5,13 @@ bx=-ax;
 ay=ax;
 by=bx;
 N=100;
-M=500;
+M=5000;
 dx=(bx-ax)/(N+1);
 dy=(by-ay)/(N+1);
 T=1;
 dt=T/(M+1);
 r=dt/(dx)^2;
+Q=50;
 %% laying out the axis
 x=zeros(N+2,1);
 x(1)=-pi;
@@ -50,7 +51,7 @@ g_ay=ay*(by-ay)^2;
 %u(x,ay,t)=f_ay+(x-ax)/(bx-ax)*(g_ay-f_ay)
 
 for ii=1:N+2
-    u(ii,1,:)=f_ay+(x(ii)-ax)/(bx-ax)*(g_ay-f_ay);
+    u(ii,1,:)=f_ay+((x(ii)-ax)/(bx-ax)*(g_ay-f_ay));
 end
 u_x_ay_t=u(2:N+1,1,1);
 
@@ -63,73 +64,46 @@ for nn=2:M+2
         u(jj,N+2,nn)=r*u(jj-1,N+2,nn-1)+(1-4*r)*u(jj,N+2,nn-1)+r*u(jj+1,N+2,nn-1)+2*r*u(jj,N+1,nn-1);
     end
 end
-
-% %% defining algorithm parameters
-% B=[r*ones(N^2+N,1),2*(1-r)*ones(N^2+N,1),r*ones(N^2+N,1)];
+% U=u;
+%% cranck nichilson
+% RHS=zeros(N+2,N+2);
+% B=sparse(N^2+N,N^2+N);
+% B_diag=(2+4*r)*eye(N)+diag(-r*ones(N-1,1),1)+diag(-r*ones(N-1,1),-1);
+% B_sup=-r*eye(N);
+% B_sup1=-2*r*eye(N);
 % 
-% d=[-N 0 N];
-% B=spdiags(B,d,N^2+N,N^2+N);
+% for ii=1:N+1
+%     B((ii-1)*(N)+1:(ii-1)*(N)+(N),(ii-1)*(N)+1:(ii-1)*(N)+(N))=B_diag;
+% end
 % 
-% B2=[r*ones(N+1,1),2*(1-r)*ones(N+1,1),r*ones(N+1,1)];
-% B2=repmat(B2,N,1);
-% d=[-N 0 N];
-% B2=spdiags(B2,d,N^2+N,N^2+N);
-% d=r*diag(ones(N,1),-N);
-% B2(N^2-N+1:N^2+N,N^2-N+1:N^2+N)=B2(N^2-N+1:N^2+N,N^2-N+1:N^2+N)+d;
+% for ii=2:N+1
+%     B((ii-2)*(N)+1:(ii-2)*(N)+(N),(ii-1)*(N)+1:(ii-1)*(N)+(N))=B_sup;
+%     B((ii-1)*(N)+1:(ii-1)*(N)+(N),(ii-2)*(N)+1:(ii-2)*(N)+(N))=B_sup;
+% end
 % 
-% a=2*(r+1)*ones(N+1,1);
-% b=zeros(N+1,1);
-% b(1:N)=-r*ones(N,1);
-% c=zeros(N+1,1);
-% c(2:N)=-r*ones(N-1,1);
-% c(N+1)=-2*r;
-% 
-% a2=2*(r+1)*ones(N,1);
-% b2=zeros(N,1);
-% b2(1:N-1)=-r*ones(N-1,1);
-% c2=zeros(N,1);
-% c2(2:N)=-r*ones(N-1,1);
-% 
-% u_n_half=zeros(N^2+N,1);
-% u_n_1=zeros(N^2+N,1);
+% B(N^2+1:N^2+N,N^2-N+1:N^2)=B_sup1;
 % 
 % 
-% for ii=1:M+1
-%    un=u(2:N+1,2:N+2,ii);
-%    un=reshape(un',N^2+N,1);
-%    f=B*un;
-%    f=reshape(f,N+1,N);
-%    f=f';
-%    f(:,1)=f(:,1)+u_x_ay_t;
-%    f(1,:)=f(1,:)+u_ax_y_t;
-%    f(N,:)=f(N,:)+u_bx_y_t;
-%    f=reshape(f',N^2+N,1);
-%    for jj=1:N
-%        u_n_half(1+(jj-1)*(N+1):jj*(N+1))=tridiag(a,c,b,f(1+(jj-1)*(N+1):jj*(N+1)));
-%    end
-%    u_n_half=reshape(u_n_half,N+1,N);
-%    u_n_half=reshape(u_n_half',N^2+N,1);
-%    f=B2*u_n_half;
-%    f=reshape(f,N,N+1);   
-%    f(:,1)=f(:,1)+u_x_ay_t;
-%    f(1,:)=f(1,:)+u_ax_y_t;
-%    f(N,:)=f(N,:)+u_bx_y_t;
-%    f=reshape(f,N^2+N,1);
-%    for jj=1:N+1
-%        u_n_1(1+(jj-1)*N:jj*N)=tridiag(a,c,b,f(1+(jj-1)*N:jj*N));
-%    end
-%    u(2:N+1,2:N+2,ii+1)=reshape(u_n_1,N,N+1);   
+% for nn=2:M+1
+%     for jj=2:N+1
+%         for kk=2:N+1
+%             RHS(jj,kk)=r*u(jj-1,kk,nn)+(2-4*r)*u(jj,kk,nn)+r*u(jj+1,kk,nn)+r*u(jj,kk-1,nn)+r*u(jj,kk+1,nn);
+%         end
+%         RHS(jj,N+2)=r*u(jj-1,N+2,nn)+(2-4*r)*u(jj,N+2,nn)+r*u(jj+1,N+2,nn)+2*r*u(jj,N,nn);
+%     end
+%     RHS=RHS(2:N+1,2:N+2);
+%     RHS(1,:)=RHS(1,:)+r*u(1,2:N+2,1);
+%     RHS(N,:)=RHS(N,:)+r*u(N+2,2:N+2,1);
+%     RHS(:,1)=RHS(:,1)+r*u(2:N+1,1,1);
+%     rhs=reshape(RHS,N^2+N,1);
+%     
+%     un=reshape(u(2:N+1,2:N+2,nn),N^2+N,1);
+%     un1=B\rhs;
+%     u(2:N+1,2:N+2,nn+1)=reshape(un1,N,N+1);
+%     
 % end
 
-% ploting result
-% [xx,yy]=meshgrid(x',y);
-% for ii=1:M+2
-%     figure
-%     surf(yy,xx,u(:,:,ii));
-%     xlabel('x axis')
-%     ylabel('y axis')
-% %     title(['u(x,y) for t=' num2str(time) ' sec' ])
-% end
+%%
 fr=figure;
 [xx,yy]=meshgrid(x',y);
 filename='testanimated.gif';
